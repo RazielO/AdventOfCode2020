@@ -9,3 +9,5 @@ My solutions for the [Advent of Code 2020](https://adventofcode.com/2020) in Has
 3. [Day 3](Day3/Main.hs)
 4. [Day 4](Day4/Main.hs)
 5. [Day 5](Day5/Main.hs)
+5. [Day 6](Day6/Main.hs)
+5. [Day 7](Day7/Main.hs)
