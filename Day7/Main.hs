@@ -6,7 +6,8 @@ import Data.List.Split (splitOn)
 
 data Bag = Bag
   { color :: String,
-    content :: [(Int, String)]
+    content :: [(Int, String)],
+    value :: Int
   }
   deriving (Show, Eq)
 
@@ -20,7 +21,7 @@ cleanLine line =
     (map (\x -> if x == "bag" then "bags" else x) line)
 
 parseBag :: [String] -> [(Int, String)] -> Bag
-parseBag [] content = Bag (snd $ head content) (filter (\y -> snd y /= "no other") (tail content))
+parseBag [] content = Bag (snd $ head content) (filter (\y -> snd y /= "no other") (tail content)) (-1)
 parseBag line content = parseBag (drop (length part + 1) line) (content ++ [c])
   where
     part = takeWhile (/= "bags") line
@@ -38,6 +39,15 @@ solveOne bags terms = do
   let t = map color b
   solveOne bags t ++ b
 
+calculate :: [Bag] -> String -> Int
+calculate bags term = do
+  let bag = head $ filter (\x -> color x == term) bags
+  if null (content bag)
+    then 0
+    else if value bag /= (-1)
+      then value bag
+      else sum (map (\x -> fst x + (fst x * calculate bags (snd x))) (content bag))
+
 main :: IO ()
 main = do
   input <- readFile "input.txt"
@@ -45,3 +55,5 @@ main = do
   let bags = map (\x -> parseBag (cleanLine x) []) lines
   putStrLn "Part One Solution:"
   print $ length $ nub $ solveOne bags ["shiny gold"]
+  putStrLn "Part Two Solution:"
+  print $ calculate bags "shiny gold"
