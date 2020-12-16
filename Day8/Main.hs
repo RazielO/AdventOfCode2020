@@ -22,10 +22,11 @@ parse (x : xn) = parse xn ++ [Instruction op arg]
         then read (drop 1 (last parts)) :: Int
         else read (last parts) :: Int
 
-solveOne :: [Instruction] -> [Int] -> Int -> Int -> Int
-solveOne instructions executed acc ip
-  | ip `elem` executed = acc
-  | otherwise = solveOne instructions exec accum pointer
+execute :: [Instruction] -> [Int] -> Int -> Int -> (Bool, Int)
+execute instructions executed acc ip
+  | ip `elem` executed = (False, acc)
+  | ip >= length instructions = (True, acc)
+  | otherwise = execute instructions exec accum pointer
   where
     inst = instructions !! ip
     op = operation inst
@@ -39,9 +40,22 @@ solveOne instructions executed acc ip
         then ip + argument inst
         else ip + 1
 
+solveTwo :: [Instruction] -> [(Int, Instruction)] -> Int
+solveTwo instructions ((i, v) : xn)
+  | fst execution = snd execution
+  | otherwise = solveTwo instructions xn
+  where
+    changed = if operation v == "nop"
+                then Instruction "jmp" (argument v)
+                else Instruction "nop" (argument v)
+    instr = take i instructions ++ [changed] ++ drop (i + 1) instructions
+    execution = execute instr [] 0 0
+
 main :: IO ()
 main = do
   input <- readFile "input.txt"
   let instructions = reverse $ parse $ splitOn "\n" input
   putStrLn "Part One Solution:"
-  print $ solveOne instructions [] 0 0
+  print $ snd $ execute instructions [] 0 0
+  putStrLn "Part Two Solution:"
+  print $ solveTwo instructions (zip [0..] instructions)
