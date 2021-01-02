@@ -3,7 +3,7 @@ module Main where
 import Data.List (reverse)
 import Data.List.Split (splitOn)
 import Data.Maybe
-import qualified Data.Vector as Vector
+import qualified Data.IntMap as IM
 
 data Instruction
   = Mask {mask :: String}
@@ -11,8 +11,8 @@ data Instruction
   deriving (Show)
 
 data Computer = Computer
-  { currentMask :: Instruction,
-    memory :: Vector.Vector Instruction
+  { mask' :: Instruction,
+    memory' :: IM.IntMap Integer
   }
   deriving (Show)
 
@@ -41,43 +41,30 @@ applyMask mask value
 parseInstructions :: [String] -> [Instruction]
 parseInstructions [] = []
 parseInstructions (line : rest)
-  | start == "mask" = Mask value' : parseInstructions rest
+  | take 4 line == "mask" = Mask value' : parseInstructions rest
   | otherwise =
     Memory position' (read value' :: Integer) :
     parseInstructions rest
   where
-    start = take 4 line
     value' = tail $ last $ splitOn "=" line
     position' = read (init $ drop 4 $ init $ head $ splitOn "=" line) :: Int
-
-updateMask :: Computer -> Instruction -> Computer
-updateMask c@(Computer mask' memory') newMask = Computer newMask memory'
-
-findMemoryIndex :: Vector.Vector Instruction -> Int -> Maybe Int
-findMemoryIndex inst x = idx
-  where
-    idx
-      | Vector.length values == 0 = Nothing
-      | otherwise = Just (Vector.head values)
-    values = Vector.filter (/= -1) vals
-    vals = Vector.imap (\i ins -> if position ins == x then i else -1) inst
 
 updateMemory :: Computer -> Instruction -> Computer
 updateMemory computer@(Computer mask' slots) inst@(Memory p v) = computer'
   where
-    prevIdx = findMemoryIndex slots (position inst)
-    inst' = Memory {position = p, value = binaryToInteger (applyMask (mask mask') (integerToBinary v))}
+    idx = p `IM.lookup` slots
+    inst' = binaryToInteger $ applyMask (mask mask') (integerToBinary v)
     slots'
-      | isJust prevIdx = Vector.update slots (Vector.fromList [(fromJust prevIdx, inst')])
-      | otherwise = Vector.snoc slots inst'
-    computer' = Computer {currentMask = mask', memory = slots'}
+      | isJust idx = IM.adjust (const inst') (fromIntegral (fromJust idx)) slots
+      | otherwise = IM.insert p inst' slots
+    computer' = Computer mask' slots'
 
 doInstruction :: Computer -> Instruction -> Computer
-doInstruction computer mask'@(Mask val) = updateMask computer mask'
+doInstruction computer mask'@(Mask _) = Computer mask' (memory' computer)
 doInstruction computer inst = updateMemory computer inst
 
 solveOne :: Computer -> [Instruction] -> Integer
-solveOne computer [] = sum (Vector.map value (memory computer))
+solveOne computer [] = IM.foldl (+) 0 (memory' computer)
 solveOne computer (x : xs) = solveOne computer' xs
   where
     computer' = doInstruction computer x
@@ -87,4 +74,4 @@ main = do
   input <- readFile "input.txt"
   let instructions = parseInstructions (splitOn "\n" input)
   putStrLn "Part One Solution:"
-  print $ solveOne (Computer {currentMask = Mask "", memory = Vector.empty}) instructions
+  print $ solveOne (Computer (Mask "") IM.empty) instructions
