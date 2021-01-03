@@ -14,3 +14,7 @@ My solutions for the [Advent of Code 2020](https://adventofcode.com/2020) in Has
 8.  [Day 8](Day8/Main.hs)
 9.  [Day 9](Day9/Main.hs)
 10. [Day 10](Day10/Main.hs)
+11. Day 11
+12. [Day 12](Day12/Main.hs)
+13. [Day 13 (so far, only part one)](Day13/Main.hs)
+12. [Day 14](Day14/Main.hs)
