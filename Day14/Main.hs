@@ -2,6 +2,7 @@ module Main where
 
 import Data.List (reverse)
 import Data.List.Split (splitOn)
+import Data.Char (intToDigit)
 import Data.Maybe
 import qualified Data.IntMap as IM
 
@@ -54,9 +55,7 @@ updateMemory computer@(Computer mask' slots) inst@(Memory p v) = computer'
   where
     idx = p `IM.lookup` slots
     inst' = binaryToInteger $ applyMask (mask mask') (integerToBinary v)
-    slots'
-      | isJust idx = IM.adjust (const inst') (fromIntegral (fromJust idx)) slots
-      | otherwise = IM.insert p inst' slots
+    slots' = IM.insert p inst' slots
     computer' = Computer mask' slots'
 
 doInstruction :: Computer -> Instruction -> Computer
@@ -69,9 +68,57 @@ solveOne computer (x : xs) = solveOne computer' xs
   where
     computer' = doInstruction computer x
 
+truthTable :: [Int] -> [[Int]]
+truthTable [] = [[]]
+truthTable (x : xs) = map (1 : ) ts ++ map (0 : ) ts
+  where 
+    ts = truthTable xs
+
+replaceFloating :: String -> [Int] -> String
+replaceFloating [] _ = ""
+replaceFloating (x : xs) v
+  | x /= 'X' = x : replaceFloating xs v
+  | otherwise = intToDigit (head v) : replaceFloating xs (tail v)
+
+applyMaskV2 :: String -> String -> [Integer]
+applyMaskV2 mask val
+  | length val < 36 = applyMaskV2 mask (replicate (36 - length val) '0' ++ val)
+  | otherwise = map (binaryToInteger . replaceFloating m) vals
+  where
+    m = [if m == '0' then v else m | (m, v) <- zip mask val]
+    nums = length $ filter (== 'X') m
+    vals = truthTable [0 .. nums - 1]
+
+updateMemoryV2' :: Computer -> Instruction -> Computer
+updateMemoryV2' computer@(Computer mask' slots) inst@(Memory p v) = computer'
+  where
+    idx = p `IM.lookup` slots
+    slots' = IM.insert p v slots
+    computer' = Computer mask' slots'
+
+updateMemoryV2 :: Computer -> [Instruction] -> Computer
+updateMemoryV2 computer [] = computer
+updateMemoryV2 computer (x : xs) = updateMemoryV2 computer' xs
+  where
+    computer' = updateMemoryV2' computer x
+
+doInstructionV2 :: Computer -> Instruction -> Computer
+doInstructionV2 computer mask'@(Mask _) = Computer mask' (memory' computer)
+doInstructionV2 computer@(Computer m' _) inst@(Memory p v) = updateMemoryV2 computer inst'
+  where
+    inst' = map (\x -> Memory (fromIntegral x) v) (applyMaskV2 (mask m') (integerToBinary (fromIntegral p)))
+
+solveTwo :: Computer -> [Instruction] -> Integer
+solveTwo computer [] = IM.foldl (+) 0 (memory' computer)
+solveTwo computer (x : xs) = solveTwo computer' xs
+  where
+    computer' = doInstructionV2 computer x
+
 main :: IO ()
 main = do
   input <- readFile "input.txt"
   let instructions = parseInstructions (splitOn "\n" input)
   putStrLn "Part One Solution:"
   print $ solveOne (Computer (Mask "") IM.empty) instructions
+  putStrLn "Part Two Solution:"
+  print $ solveTwo (Computer (Mask "") IM.empty) instructions
